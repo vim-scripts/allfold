@@ -1,0 +1,677 @@
+
+                      allfold Script Documentation
+                            February 28, 2003
+
+============================================================================
+Section 1:                       TUTORIAL
+============================================================================
+
+Allfold is a VIM Script which implements an ALL command (somewhat similar to
+the ALL command in IBM VM's XEDIT editor ) by using the folding facility in
+VIM.  Hence the name "allfold".
+
+The basic idea of an ALL command is to display ALL the lines that contain
+a specified string, and only those lines, along with place holder lines 
+standing in for blocks of lines that do not contain the string.  In the
+UNIX world instead of lines containing a string it is more useful to 
+generalize the concept to lines matching a regular expression.
+
+An example would be a long C source file where you would like to quickly
+check on the use of certain global variables named like "counter".
+Using this script one would only need to type the following command,
+assuming this script had been sourced in, and every line containing 
+"counter" would be displayed with all the non-relevant text folded away.
+"AFP" is a mnemonic for "All Fold Pattern"
+
+:AFP counter
+
+If one determined that the use of the counter variables needed to be
+displayed with a little more context then the following command would add
+2 lines above and 3 lines below each line containing the string "counter".
+
+:AFP counter 2 3
+
+Now one might also want to check not only the counters, but also on all
+the "total" variables.  All lines containing "total" could be added to
+the viewed lines with the same additional context by the command:
+
+:AFP -or total 2 3
+
+Suppose now that it was necessary to view all of a function that printed a
+summary report of counters and totals. A command with a slightly different
+form would be needed.  This script supports a different command "All Fold
+Blocks" which allows one to specify blocks of lines that begin with one
+pattern and end with another.
+
+The following command would add to the viewed lines displayed above
+the block(s) delimited by a line matching one pattern which starts the function
+and another line matching a second pattern at the end of the function.
+Notice that the space after "void" has to be quoted with a backslash 
+according to VIM rules.
+
+:AFB -or ^void\ print_counter_total_summary ^}$
+
+Suppose after inspecting the displayed code it has become obvious that
+the counter/total variables used for overall grand totals require a
+closer view.  The following command will limit the lines viewed to
+those containing the string "grand".
+
+:AFP -and grand
+
+When satisfied with the view of the grand totals and counters, one could 
+revert to the previous view by using the following undo command.
+
+:AFU
+
+Finally after viewing the interesting lines of the file all of it could
+be viewed again with the following command "All Fold Remove".
+
+:AFR
+
+--------------------------------------------
+NOTE: Following applies only to full version
+--------------------------------------------
+
+Now suppose in day-to-day maintenance of the program file it becomes 
+necessary to constantly re-create this specialized view to insure the 
+counters and totals are properly update.  This script supports the 
+inclusion of allfold commands within the file itself where this kind of
+repetitive view is required.  To load all the allfold commands for a
+certain named view use the following command where the view name is
+"view_all_counter_totals" and the "." means the current file.
+
+:AFV view_all_counter_totals .
+
+To save retyping the commands to manually create the view it would have
+been possible to issue the follow command to save the allfold commands
+used to build up the view for later re-use:
+
+:AFS view_all_counter_totals .
+
+============================================================================
+Section 2:                Basic and Full Versions
+============================================================================
+
+The allfold script grew rather long with new features that were not frequently
+needed.  In order to limit the loading of one very long script which contained
+much that was not often used, the script was split into two scripts.  The
+basic script, allfold_basic.vim, contains the basic allfold functionality, but
+it does not allow maps and views to be stored and retrieved and does not
+implement any of the :AFL functionality of an editable command list or any use
+of so-called worksheet buffers.  If the basic script is loaded then the full
+script, allfold_full.vim, can be loaded at any time when the missing
+functionality is needed.
+
+If one regularly uses allfold then a good idea is to load the basic script in
+the .vimrc file so that it is always available.  Later if you need the full
+functionality then just source in the full script on top of the basic one
+and you're ready to go.  One last note is that the full script is completely
+non-functional without first loading the basic script since it relies on many
+functions defined there.
+
+In the rest of this document features only available in the full version are
+commented upon, but just remember the basic version doesn't have AFM, AFV, AFS,
+AFL, AFQ or AFC commands.  
+
+============================================================================
+Section 3:                   Command Descriptions
+============================================================================
+
+---------------------------------------------------------------------------
+:AFB [ -options ] start_pattern end_pattern [ before [ after ] ]
+
+Show "B"locks of lines delimited by lines matching start_pattern and
+end_pattern and fold away other lines.  Before and after are numbers
+indicating how many extra lines should be included before and after the
+blocks to provide extra context.
+
+---------------------------------------------------------------------------
+:AFC [ -options ] buffer_name                   NOTE: Requires Full Version
+
+"C"opy selected lines to a separate buffer and display in a new window.
+The option "-uns" copies the unselected lines to the separate buffer.
+The option "-cut" cuts the copied lines from the original buffer.
+
+See the section "File Naming Shortcuts" on conventions for providing a
+buffer_name parameter.
+
+---------------------------------------------------------------------------
+:AFF
+
+"F"reshen (refresh) the display by re-valuating lines to be displayed 
+after making changes to buffer.  The saved commands will be reapplied.
+
+---------------------------------------------------------------------------
+:AFG [ -options ] register_name  [ map_segment_length ]
+
+"G"rab the current view command list or line selection map and save it in a
+register.  The view commands are normally grabbed.  The "-map" option will
+grab the line selection map.
+
+The option "-use" causes the contents of the register to be used to
+fold the buffer either as a map or view.  The and/or options are supported
+with the "-use" option, and when "-use" is specified the command is stored
+into the command list for the current view.  Note that this makes the
+reproducibility of a view dependent on the register contents so that the AFF
+command will give a different view if the register contents have changed.
+This is a feature if used wisely, and a trap for the unwary.
+
+If the -map option is set then the map is divided into segments of
+map_segment_length.  If the value is 0 then only 1 segment is produced.  Each
+segment is stored in the register as a single line.  The default value if none
+is supplied is a segment length of 64.  When the -set option is used with -map
+then everything but 0 and 1 characters are deleted and the result becomes the
+map.  If the resultant map does not equal the length of file in lines then an
+error message is given.
+
+One can duplicate most of the functionality of the allfold full version AFS,
+AFM, and AFV commands with this command by doing a little extra manual work.
+Also one may use this command as a primitive function to interface with the
+allfold_basic script when writing custom scripts.
+
+---------------------------------------------------------------------------
+:AFH
+
+Check if the buffer "H"as any previously defined folds.  A message indicating
+whether or not folds were found is displayed.  This command allows one to
+check for previously existing folds that might be erased before issuing any
+allfold commands.
+
+---------------------------------------------------------------------------
+:AFI
+
+"I"nvert the current file view by folding away the currently visible lines
+and displaying the lines currently folded away.  Logically inverts the
+map controlling the display. An AFI command as the first command issued
+for a buffer folds away all the lines.
+
+---------------------------------------------------------------------------
+:AFL [ -options ] list_buffer                   NOTE: Requires Full Version
+
+Edit the "L"ist of commands making up the current view in a buffer named
+"list_buffer".  If the options contain "-out" the commands put "out" into the
+list_buffer.  If the options do not contain "-out" then they are pulled "in"
+from the list_buffer and applied to the file.
+
+The option "-wks" combined with "-out" declares the buffer receiving the
+command chain to be a worksheet for the current file.
+
+See "Views" section below for more information on use of the AFL command.
+
+---------------------------------------------------------------------------
+:AFM [ -options ] map_name [ map_file ]         NOTE: Requires Full Version
+
+Search the file "map_file" for lines defining a "M"ap named "map_name" and read
+in the stored map then refold the view of the current file so that selected
+lines are display and the rest are folded away.  If the length of the map
+does not equal the length of file then an error message is given.
+
+See the section "File Naming Shortcuts" on conventions for providing a
+map_file parameter.
+
+---------------------------------------------------------------------------
+:AFP [ -options ] pattern [ before [ after ] ]
+
+Show all lines matching "P"attern and fold away other lines.  Before and after
+are numbers indicating how many extra lines should be included before and
+after the selected lines to provide extra context.
+
+---------------------------------------------------------------------------
+:AFQ                                            NOTE: Requires Full Version
+
+Fold a file with begin line markers.  The current buffer must contain a 
+file with all lines marked with a '1' or a '0' as the first character
+indicating whether the line should be displayed.  A file of this format
+can be produced by the AFS command with the "-blm" option or may be
+produced by any other means.  Once the AFQ command has folded the file,
+an "AFS -map" can save just the map for reuse without relying on the begin
+line markers being in the file.
+
+---------------------------------------------------------------------------
+:AFR 
+
+"R"emove all of the allfold operations and restore normal file view.
+
+---------------------------------------------------------------------------
+:AFS [ -options ] view_map_name [ view_map_file 
+     [ start_line [ begin_view_map [ end_view_map ] ] ] ]
+
+NOTE: Requires Full Version
+
+"S"ave into the file "view_map_file" an entry defining a view or map named
+"view_map_name".  A map is saved if the options contain "-map" otherwise a
+view consisting of a list of commands is saved.  The map is a character based
+'bit-map' of lines displayed with '1' indicating a line that is displayed and
+'0' indicating a line that is folded away. 
+
+Any existing view or map definitions with the save name are deleted before
+the new definition is stored. View and map names make up separate name
+spaces so having a view and a map with the same name is not a problem.
+
+Please refer to the Views section in this document that describe the concept
+of a "view" and its implications on issuing commands.
+
+If the option contains "-reg" the view_map_file must be one of the 
+named registers and the view or map is placed there.
+
+"start_line" is a character string placed at the start of each line
+used to indicate that the line is commentary to the file's primary use.
+By default "#" will be placed in front of each view/map line
+
+"begin_view_map" is a character string placed at the beginning of the view/map
+lines typically to designate a the beginning of a commentary section.
+"end_view_map" is the character string used to close the commentary section.
+There is no default values for these parameters. 
+
+Some options apply only to saving a map.  An additional option of "-oml"
+specifies that the map is stored as one long line otherwise it is split into
+64 entries per line.  The option "-blm" saves the buffer's file with the map
+entry for each line prepended to the line.  
+
+The -blm version allows for convenient manipulation of the file by
+whether the line was selected or not.  None of the other options for this
+command apply with this option since a file is always produced.  Any old file
+with map_file as the name is replaced automatically.  Also the view_map_name
+is only present as a placeholder for this option.
+
+---------------------------------------------------------------------------
+:AFU 
+
+"U"ndo the previous AFP, AFB, AFV, AFM, AFG, or AFI command defining the
+current view of the file. Please refer to the Views section in this document
+that describe the concept of a "view" and its implications on issuing
+commands.
+
+---------------------------------------------------------------------------
+:AFV [ -options ] view_name [ view_file ]       NOTE: Requires Full Version
+
+Search the file "view_file" for lines defining a "V"iew named "view_name"
+and issue the associated view commands.
+
+See the section "File Naming Shortcuts" on conventions for providing a
+view_file parameter.
+
+Please refer to the Views section in this document that describe the concept
+of a "view" and its implications on issuing commands.
+
+---------------------------------------------------------------------------
+
+Command Parameters:
+======= ===========
+
+"before/after" Specify the number of additional lines before and after
+               the matching lines to be displayed for additional context.
+               before must be specified, possibly 0, if after is needed.
+               Applies to AFP and AFB.
+
+"begin_view_map" String placed before the view or map stored in a file.
+                 Applies to AFS.
+
+"buffer_name" Buffer name into which selected lines will be copied.
+              Applies to AFC.
+
+"end_view_map" String placed after the view stored in a file.
+               Applies to AFS.
+
+"list_buffer" Buffer used to save and edit the chain of commands defining the
+              current view of a file.
+              Applies to AFL.
+
+"map_file" File from which a map will be retrieved.
+           Applies to AFM.
+
+"map_name" Name of map to retrieve.
+           Applies to AFM.
+
+"-options" Are specified as a string of option keywords with a leading '-'
+           and '-' separating each option. ie. -opt1-opt2-opt3
+           An option string of "-" is useful as a placeholder if the
+           next command parameter begins with "-".
+           NOTE: Never place any whitespace in the options string!!!
+           Applies to almost all commands.
+
+"patterns (start/end)" Are VIM regular expression search patterns
+
+"register_name" Name of register used to grab or use.
+                Applies to AFG.
+
+"start_line" String placed at the start of each line when a view or map
+             is stored in a file.
+             Applies to AFS.
+
+"view_file" File from which a view will be retrieved.
+            Applies to AFV.
+
+"view_name" Name of view to retrieve.
+            Applies to AFV.
+
+"view_map_file" File into which a view or map will be stored.
+                Applies to AFS.
+
+"view_map_name" Name of view or map to store.
+                Applies to AFS.
+
+Command Options:
+======= ========
+
+"-and"  Combine the selections of this command with the previous command
+        by AND'ing the two selections together.  Displayed lines will
+        have been selected by this command and the previous command.
+        Applies to AFP, AFB, AFV, and AFM.
+
+"-blm"  Combine the map with the file contents by placing the map entry
+        as the beginning character of each line. Begin Line Map
+        Applies to AFS.
+
+"-cut"  After copying lines CUT them from the original buffer.
+        Applies to AFC.
+
+"-not"  Invert logic by selecting lines NOT matching the selection command.
+        Applies to AFP, AFB, AFV, and AFM.
+
+"-olm"  Store the map as one long line instead of segments.
+        Applies to AFS.
+
+"-or"   Combine the selections of this command with the previous command
+        by OR'ing the two selections together.  Displayed lines will have
+        either been selected by this command or by the previous command.
+        Applies to AFP, AFB, AFV, and AFM.
+
+"-out"  Write out the current command chain to a buffer for editing.
+        Applies to AFL.
+
+"-reg"  Store the desired data in a REGister instead of a file.  The first
+        character of the file name is taken as the register name.
+        Applies to AFS.
+
+"-uns"  Copy UNSelected lines. ie Those lines that don't match the view.
+        Applies to AFC.
+
+"-use"  Causes the grab command AFG to USE the register contents to
+        update the view.
+        Applies to AFG.
+
+"-wks"  After writing out the command chain to a buffer declare that buffer
+        to be a worksheet for the current file.
+        Applies to AFL.
+
+============================================================================
+Section 4:  View and Map Definition Line Format  NOTE: Requires Full Version
+============================================================================
+
+Lines in a file that define views and maps are formatted as:
+
+<begin_view_map><start_line>[AFX]?:view_map_name:?[BGN]?
+<start_line>xxxxxxxxxxxx?[AFX]?:view_map_name:view_command_1
+<start_line>xxxxxxxxxxxx?[AFX]?:view_map_name:view_command_2
+<start_line>?[AFV]?:view_map_name:?[END]?<end_view_map>
+
+example:
+
+/*_?[AFV]?:example:?[BGN]?
+_?[AFV]?:example:AFP something 0 0
+_?[AFV]?:example:AFP -or theother 0 0
+_?[AFV]?:example:?[END]?*/
+
+The funky string "?[AFX]?" identifies the line as a view or view definition.
+For views the X is replaced with "V" and for maps an "M" is used.  The
+view_map_name is an arbitrary name of lower care letters, digits, and
+underscores.
+
+The view command is the same allfold command as would be typed at the command
+line.  Colons in the view definition lines are mandatory delimiters and no
+extra whitespace should be added around the colons.  Any characters preceding
+the "?[AFX]?" marker are ignored, but nothing should follow the view_command.
+
+"<start_line>" is the start_line string that can be specified in the 
+               AFS command.
+
+"<begin_view_map>" is the begin_view string that can be specified in the 
+               AFS command.
+
+"<end_view_map>"  is the end_view string that can be specified in the 
+              AFS command.
+
+When the AFS command stores a map or view definition the lines with the
+?[BGN]? and ?[END]? markers are only included if the begin_view_map
+and end_view_map strings are specified.
+
+As an aid to organizing the placement of view and map definitions within
+files, sections for their storage can be delimited by section marker lines.
+If a file contains the something like the following lines then views will only
+be stored between the lines containing ?[AFVS]??[BGN]? and ?[AFVS]??[END]?
+Similarly for maps the strings ?[AFMS]??[BGN]? and ?[AFMS]??[END]
+
+#-------------------------------------------------------->?[AFVS]??[BGN]?
+#?[AFV]?:show_counter:AFP counter 1 2
+#?[AFV]?:show_counter:AFP -or total
+#-------------------------------------------------------->?[AFVS]??[END]?
+
+#-------------------------------------------------------->?[AFMS]??[BGN]?
+#?[AFM]?:cntr_map:0001000000001110110000010100000011001110000000000011100
+#?[AFM]?:cntr_map:0100000000000001000001111000001100000000000001000011100
+#--------------------------------------------------------->?[AFMS]??[END]?
+
+Without sections the map and view definitions saved by the AFS command will
+just be concatenated to the end of the file.
+
+When retrieving maps or definitions the AFM and AFV commands will only
+search within the appropriate section if it exists in the file otherwise
+the whole file is searched.
+
+============================================================================
+Section 5:       Some Interesting Possibilities And Pitfalls
+============================================================================
+
+Once a file has been folded appropriately the :folddoopen and :folddoclosed
+commands can be used to execute commands on the viewed or non-viewed
+lines. If you wish to save a copy of the selected lines use the following
+command: ( Note that this replaces a line with itself so technically
+it changes a file )
+
+:%folddoopen .!tee -a save_selected_lines.file
+
+Use the following command to save a copy of all non-displayed lines:
+
+:%folddoclosed .!tee -a save_unselected_lines.file
+
+If you are not using the full version then these commands are a work around
+for the :AFC command.
+
+The default setting of the vim option foldminlines is 1.  So by default
+vim will not fold a single line out of view.  This makes sense in a way
+since the fold marker line will still take up a line of display, but if
+it is important when using the :folddoopen and :folddoclosed commands
+the foldminlines option can be set to 0.  Alternately when viewing a
+file it might be helpful to increase the foldminlines to cut down on
+the distracting display of too many closed fold marker lines.  If you
+use the allfold line map be aware that it does not take into account
+the foldminlines option and its effect on the actual vim display of
+lines.
+
+This script package is intended to be used on files that are not folded
+by other means.  The interactions of all the fold methods has not been
+taken into account.  BE AWARE THAT THESE SCRIPTS ISSUE "zE" COMMANDS
+TO ERASE ALL OTHER MANUAL FOLDS BEFORE DOING THEIR OWN FOLDING.  Folding
+is a complicated topic and programming around arbitrary use of
+this feature when attempting automatic folding is tricky to say the
+least.  One improvement might be to analyze a file for prior existing
+closed folds and preserve this information in a map of folded lines.
+Scripting functions foldclosed() and foldclosedend() would be helpful
+in this approach.  The :AFH can check a file for existing folds.
+
+Using this package with the -c vim option is a useful technique for cases
+where one wishes to frequently view a file in a specific folded form.
+A command like:
+
+vim -c "source allfold.vim" -c "AFP X" file_to_fold.txt
+
+allows for quick and easy viewing of specific lines in a file matching
+pattern X. Several -c commands can be used to issue allfold commands and
+the command can be saved in a script file or recalled from command
+history and modified as desired.  For more complicated folding schemes
+a view could be saved by name in some file, including the file to be
+folded, and later be invoked by a line like the following:
+
+vim -c "source allfold.vim" -c "AFV myviewx myviews.file" file_to_fold.txt
+
+One simple trick that comes in handy if a file must be extensively 
+rearranged is to manually insert temporary markers to match lines that
+need to be moved.  The file can be folded using the :AFP and :AFB
+commands using the -and and -or options.  The selected/deselected lines
+can then be copied or cut to a new buffer using the :AFC command.
+Alternatively one could use the :AFM command with the -blm option to
+save a copy of the file with each line marked with a selection flag
+as the first character, and this file could be processed by any
+appropriate technique including a custom program or VIM script.
+
+============================================================================
+Section 6:                        Views
+============================================================================
+
+NOTE: Much of the following only applies when using the full version of
+      allfold.  See section on Basic and Full versions.
+
+Definition of a "View"
+========== == = ======
+
+A view refers to a particular folding pattern.  As one issues various allfold
+commands the view one has of a files changes.  The "view" is defined by the
+command or sequence of commands that have resulted in a particular set of
+lines being chosen for display.  The commands that are "view-defining" are
+AFP, AFB, AFV, AFM, AFI, and AFG.  The AFI command is a little different in
+that it defines a view but can not start a view except if it is issued as the
+very first command. 
+
+The view-defining commands, except AFI, issued without a "-or" or "-and"
+option always start a new view.  The subsequent view-defining commands with
+and/or options build up a chain of commands that construct a view.  Once a
+view-defining command is issued without and/or options then a new view begins
+to be defined.  The term "view-continuation command" refers to a
+view-defining command with an and/or options along with the AFI command.  Often
+in this document the list of commands built-up for a view is referred to as a
+"chain" of commands.
+
+The following command will display the current view's command list and may be
+helpful in following the construction of a view:
+
+:echo b:cmd_done_list
+
+
+Implications of Views
+============ == =====
+
+The allfold commands keep a list of commands used to construct the
+current file view.  The AFS command saves this command chain to a file in
+a structured package form.  The AFL command copies the chain of commands
+which constructed the current view to a separate buffer where one may
+edit them as desired then reapply them to the viewed file as if each
+command had been issued as separately typed commands. The AFM command
+saves a map defining a view by the set of selected lines.
+
+The AFU command undoes the last command in the sequence of commands which
+constitutes the view.  When AFU undoes the first command in a view's sequence
+of commands then the original unfolded file is displayed and further AFU
+commands just give an error message.  ( You can still use the VIM command
+history list to back-up further. )
+
+The AFR command completely resets the allfold operation so of course it resets
+the list of commands for a view.
+
+As each individual command making up a view is entered, the allfold 
+script completely rebuilds the view from scratch to allow for changes
+to the file between commands.  When a view-continuation command is
+issued, the map of lines to include in the display is reset then all
+the commands in the list used to construct the view are evaluated to
+remark the line selection map.  Lastly the new command is issued
+add the resulting map is used to define folds that only display the
+selected lines.
+
+In essence the view's sequence of commands defines a type of expression with
+"and", "or", and "not" operators.   Since there are no parentheses available
+in the sequence of commands some folding operations may be difficult are
+impossible to express.  The solution is to use views defining parts of the
+expression which would typically be included in parentheses. Then AFV or AFG
+commands with and/or options could combine the separate sub-parts.  
+
+Using The AFL Command                           NOTE: Requires Full Version
+===== === === =======
+
+The AFL command implements a way by which the current view's chain of commands
+may be viewed and edited.  When an ":AFL -out buffer_name" command is issued
+the current view's command chain is inserted into the buffer named in the
+command.  The cursor is placed in the window containing this buffer and the
+commands may be edited as desired.  When the editing is complete the ":AFL
+buffer_name" command retrieves the modified command chain and refolds the
+file.
+
+AFL Command Worksheets                          NOTE: Requires Full Version
+=== ======= ==========
+
+In order to integrate the AFL command and its operation more closely with
+other allfold operations, the concept of a "worksheet" for a file has been
+introduced.  If the ":AFL -out buffer_name" has the option "-wks" added as in
+":AFL -out-wks buffer_name" then the buffer named buffer_name is elevated to a
+special status within allfold of being an allfold worksheet for the file for
+which the AFL command was issued.  A file knows its worksheet and the
+worksheet knows for which file it is serving as a worksheet.
+
+A worksheet contains not only the list of commands making up the current view,
+but also sections for saving other views and maps that are useful in working
+with the file for which it serves as a worksheet.  Once a file has had a
+worksheet defined for it then all views, maps, and the command list are stored
+in the worksheet buffer by default.  Also any fold commands issued from the
+window containing the worksheet are applied to its owing file.  As new folding
+commands are issued the worksheet is automatically updated to contain the
+current view's command chain.
+
+The worksheet for a file can be saved and reused in a later editing session by
+issuing the AFL command with the -out-wks option.  Once an editing session is
+ended however the link between worksheet and file is dropped until reconnected
+with an appropriate AFL command.
+
+============================================================================
+Section 7:         File Naming Shortcuts         NOTE: Requires Full Version
+============================================================================
+
+Several allfold commands require a buffer or file name be supplied for saving
+or retrieving data.  Some shortcut conventions and VIM global variables can be
+used to help with providing file/buffer names.
+
+If the name is given as "." then the name of the current buffer is used as the
+file/buffer name.
+
+If the name is given as "_" then the contents of the VIM global variable
+"AFF_libfile" is used as the file name.  The idea here is to provide a user
+defined file that serves as an overall library for storage and retrieval for a
+user.
+
+If the name is given in the form "_somedir/somefile" then the leading portion
+of the path is retrieved from the VIM global variable "AFF_libdir" and replaces
+the underscore character.  This is intended to allow a user to define a
+particular directory to contain miscellaneous files containing allfold data in
+one location.
+
+The name of ".afd" creates a name from the current buffer by changing any
+existing name extension from ".x" to "_x" and then adding a new extension
+of ".afd" for allfold data.  An example would be saving something from a
+buffer named my_c_source.c with the a named supplied as ".afd".  The data
+would be saved in a file named my_c_souce_c.afd.
+
+The name of "_.afd" cause the original buffer name to be changed so that the
+path is changed to the contents of the VIM global variable "AFF_libdir" and the
+file extension changed to ".afd".  For a buffer named
+
+"/somewhere/outthere/my_c_souce.c"
+
+the file to be used for data would be
+
+"/home/username/vim/allfold_dir/my_c_source_c.afd"
+
+if g:AFF_libdir contained
+
+"/home/username/vim/allfold_dir/".
+
+============================================================================
+                              The End.
+============================================================================

@@ -1,0 +1,12 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=578
+
+The allfold scripts implement a feature set which allows VIM users to view ALL interesting lines in a buffer and FOLD the rest away.  Lines are selected to be interesting in one of the two following ways: 
+
+1. They match a regular expression pattern.
+2. They are in a block of lines delimited inclusively by a line that matches
+   a beginning RE pattern and a line that matches an ending RE pattern.
+
+Sets of lines matching different selection criteria can be combined using logical "and" and "or" operations. The selections may be inverted so that lines not matching the selection criteria are actually selected.
+
+Beyond these basics other features do such things as manipulating lists of selection commands and using the raw selection "bit-map" directly to enhance the capabilities and ease of use of the scripts.
+
