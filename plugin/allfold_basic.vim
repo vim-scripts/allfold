@@ -23,9 +23,15 @@
 if exists("g:AFB_allfold_disabled")
 	if g:AFB_allfold_disabled | finish | endif
 endif
+
+if exists("g:AFB_loaded")
+	finish
+endif
+
 "
 " Initialize buffer global variables.
 "
+function! s:AFB_setup()
 if !exists( "b:af_done" )
 	let b:af_done = 0
 	let b:kx_map=''
@@ -34,10 +40,7 @@ if !exists( "b:af_done" )
 	let b:cmds_after_init_map=0   " Count of AFP, AFB, and AFI commands
                                  " since the map was last initialized
 endif
-
-if exists("g:AFB_loaded")
-	finish
-endif
+endf
 
 "
 " Initialize VIM global variables.
@@ -753,6 +756,19 @@ function! AFB_cleanup_for_return(startline,startline_folded)
 	let b:af_done=1
 endfunction
 
+" Autocommands: {{{
+
+augroup allfold_setup
+  au!
+  " Run on file type change.
+  au FileType * call <SID>AFB_setup()
+
+  " Run on new buffers.
+  au BufNewFile,BufRead,BufEnter *
+        \   call <SID>AFB_setup()
+augroup END
+
+"}}}
 "=============================================================================
 "                     Buffer/File I/O Functions
 "=============================================================================
